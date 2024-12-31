@@ -12,12 +12,10 @@ const nextConfig = {
       },
     ];
   },
-  serverRuntimeConfig: {
-    BLOB_TOKEN: process.env.BLOB_READ_WRITE_TOKEN,
-    GOOGLE_CREDENTIALS: process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON,
-  },
-  publicRuntimeConfig: {
-    // Add any public runtime configs here if needed
+  env: {
+    GOOGLE_APPLICATION_CREDENTIALS_JSON: process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON,
+    BLOB_READ_WRITE_TOKEN: process.env.BLOB_READ_WRITE_TOKEN,
+    ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
   }
 }
 
