@@ -17,14 +17,17 @@ const getVideoClient = () => {
 
     let parsedCredentials;
     try {
-      parsedCredentials = JSON.parse(credentials);
+      // Handle both string and already-parsed JSON
+      parsedCredentials = typeof credentials === 'string' 
+        ? JSON.parse(credentials.replace(/\\n/g, '\n')) 
+        : credentials;
+        
       console.log('Successfully parsed credentials for project:', parsedCredentials.project_id);
     } catch (e) {
       console.error('Failed to parse credentials:', e);
       throw new Error('Failed to parse Google credentials JSON');
     }
 
-    // Create client with explicit credentials
     video_client = new VideoIntelligenceServiceClient({
       credentials: parsedCredentials,
       projectId: parsedCredentials.project_id
