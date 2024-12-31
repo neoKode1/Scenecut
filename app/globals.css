@@ -1,0 +1,310 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  .app-container {
+    @apply min-h-screen bg-black text-white p-4 flex flex-col md:flex-row gap-4;
+    background-image: linear-gradient(to bottom, rgba(0,0,0,0.95), rgba(0,0,0,0.98)),
+                     repeating-linear-gradient(0deg, transparent, transparent 1px, rgba(26, 54, 93, 0.1) 1px, rgba(26, 54, 93, 0.1) 2px);
+  }
+
+  .instructions-panel {
+    @apply bg-gray-900/50 p-6 rounded-lg md:w-1/3 backdrop-blur-sm border border-gray-800;
+    box-shadow: 0 0 20px rgba(43, 82, 120, 0.1);
+  }
+
+  .chat-container {
+    @apply flex-1 flex flex-col gap-4;
+  }
+
+  .chat-messages {
+    @apply bg-gray-900/50 p-6 rounded-lg flex-1 overflow-y-auto min-h-[400px] backdrop-blur-sm border border-gray-800;
+    box-shadow: 0 0 20px rgba(43, 82, 120, 0.1);
+  }
+
+  .app-title {
+    @apply text-6xl font-orbitron text-center mb-12 text-white;
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.8),
+                 0 0 20px rgba(255, 255, 255, 0.8),
+                 0 0 30px rgba(255, 255, 255, 0.6),
+                 0 0 40px rgba(255, 255, 255, 0.4);
+    letter-spacing: 0.5em;
+    font-weight: 700;
+  }
+
+  .message {
+    @apply mb-4 p-3 rounded-md text-center;
+    background: rgba(17, 24, 39, 0.7);
+  }
+
+  .message.system {
+    @apply bg-gray-800/50 text-gray-300;
+  }
+
+  .message.error {
+    @apply bg-transparent text-red-500 font-semibold;
+  }
+
+  .message.technical {
+    @apply bg-blue-900/50 font-mono whitespace-pre-wrap border-blue-800;
+  }
+
+  .controls {
+    @apply flex flex-col gap-4;
+  }
+
+  .upload-area {
+    @apply border-2 border-dashed border-gray-700 rounded-lg p-8 text-center cursor-pointer
+    hover:border-gray-600 transition-colors bg-gray-900/30 backdrop-blur-sm;
+  }
+
+  .prompt-button {
+    @apply bg-gray-800/80 py-3 px-6 rounded-lg font-normal text-gray-300
+    hover:bg-gray-700/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors;
+  }
+
+  .analysis-stats {
+    @apply bg-gray-900/50 p-6 rounded-lg space-y-4 backdrop-blur-sm border border-gray-800;
+    box-shadow: 0 0 20px rgba(43, 82, 120, 0.1);
+  }
+
+  .stat-item {
+    @apply p-4 bg-gray-800/50 rounded-lg border border-gray-700;
+  }
+
+  .stat-label {
+    @apply text-cyan-400 font-semibold mb-2;
+    text-shadow: 0 0 10px rgba(34, 211, 238, 0.3);
+  }
+
+  .shot-timeline {
+    @apply flex gap-1 mt-2;
+  }
+
+  .shot-segment {
+    @apply h-4 bg-cyan-600/80 rounded hover:bg-cyan-500 transition-colors;
+    box-shadow: 0 0 10px rgba(34, 211, 238, 0.2);
+  }
+
+  .tip {
+    @apply text-cyan-400 bg-gray-800/50 p-4 rounded-lg border border-gray-700;
+  }
+
+  .analysis-container {
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+
+  .messages {
+    margin-bottom: 20px;
+  }
+
+  .message {
+    padding: 10px;
+    margin-bottom: 8px;
+    border-radius: 4px;
+  }
+
+  .message.system {
+    background-color: #1a2e3b;
+    color: #61dafb;
+  }
+
+  .message.error {
+    background-color: #3b1a1a;
+    color: #fb6161;
+  }
+
+  .analysis-results {
+    background-color: #1a1d24;
+    border-radius: 8px;
+    padding: 20px;
+  }
+
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+  }
+
+  .stat {
+    text-align: center;
+  }
+
+  .stat h3 {
+    color: #61dafb;
+    margin-bottom: 8px;
+  }
+
+  .stat .value {
+    font-size: 24px;
+    font-weight: bold;
+  }
+
+  .timeline-container {
+    margin-bottom: 30px;
+  }
+
+  .shot-timeline {
+    position: relative;
+    height: 30px;
+    background-color: #2a2e35;
+    border-radius: 4px;
+    margin-top: 10px;
+  }
+
+  .shot-segment {
+    position: absolute;
+    height: 100%;
+    background-color: #61dafb;
+    opacity: 0.8;
+    transition: opacity 0.2s;
+  }
+
+  .shot-segment:hover {
+    opacity: 1;
+  }
+
+  .shot-list {
+    display: grid;
+    gap: 10px;
+  }
+
+  .shot-item {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 15px;
+    padding: 10px;
+    background-color: #2a2e35;
+    border-radius: 4px;
+    align-items: center;
+  }
+
+  .shot-number {
+    color: #61dafb;
+    font-weight: bold;
+  }
+
+  .shot-time {
+    color: #ffffff;
+  }
+
+  .shot-duration {
+    color: #8b949e;
+  }
+
+  .main-content {
+    @apply flex-1 flex flex-col gap-4;
+  }
+
+  .video-analysis {
+    @apply flex flex-col gap-4;
+  }
+
+  .dropzone {
+    @apply border-2 border-dashed border-gray-700 rounded-lg p-8 text-center cursor-pointer
+    hover:border-gray-600 transition-colors bg-gray-900/30 backdrop-blur-sm;
+  }
+
+  .messages {
+    @apply space-y-2;
+  }
+
+  .message {
+    @apply p-3 rounded-md;
+  }
+
+  .message.system {
+    @apply bg-gray-800/50 text-cyan-400;
+  }
+
+  .message.error {
+    @apply bg-red-900/50 text-red-400;
+  }
+
+  .analysis-results {
+    @apply bg-gray-900/50 p-6 rounded-lg space-y-6;
+  }
+
+  .stats {
+    @apply grid grid-cols-2 gap-4;
+  }
+
+  .stat {
+    @apply bg-gray-800/50 p-4 rounded-lg text-center;
+  }
+
+  .stat h3 {
+    @apply text-cyan-400 text-sm mb-2;
+  }
+
+  .stat .value {
+    @apply text-2xl font-bold;
+  }
+
+  .shot-list {
+    @apply space-y-4;
+  }
+
+  .shot-list h3 {
+    @apply text-cyan-400 mb-3;
+  }
+
+  .shot-item {
+    @apply bg-gray-800/50 p-3 rounded-lg flex justify-between items-center;
+  }
+
+  .shot-number {
+    @apply text-cyan-400 font-medium;
+  }
+
+  .shot-time {
+    @apply text-gray-300;
+  }
+
+  .shot-duration {
+    @apply text-gray-500;
+  }
+
+  .generate-prompt-btn {
+    @apply bg-cyan-600 text-white py-2 px-4 rounded-lg
+           hover:bg-cyan-700 disabled:opacity-50 disabled:cursor-not-allowed
+           transition-colors mt-4 w-full;
+  }
+
+  .prompt-result {
+    @apply mt-6 p-4 bg-gray-800/50 rounded-lg;
+  }
+
+  .prompt-result h3 {
+    @apply text-cyan-400 mb-3;
+  }
+
+  .prompt-result pre {
+    @apply text-gray-300 text-sm;
+  }
+
+  .copy-btn {
+    @apply mt-4 bg-gray-700 text-white py-2 px-4 rounded-lg
+           hover:bg-gray-600 transition-colors text-sm;
+  }
+}
+
+@keyframes glow {
+  from {
+    text-shadow: 0 0 5px #fff,
+                 0 0 10px #fff,
+                 0 0 15px #2b5278,
+                 0 0 20px #2b5278;
+  }
+  to {
+    text-shadow: 0 0 10px #fff,
+                 0 0 20px #fff,
+                 0 0 30px #2b5278,
+                 0 0 40px #2b5278;
+  }
+} 
