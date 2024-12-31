@@ -3,14 +3,8 @@
   "framework": "nextjs",
   "buildCommand": "next build",
   "env": {
-    "GOOGLE_APPLICATION_CREDENTIALS_JSON": {
-      "value": "@google-credentials-json"
-    },
-    "BLOB_READ_WRITE_TOKEN": {
-      "value": "@blob-read-write-token"
-    },
-    "ANTHROPIC_API_KEY": {
-      "value": "@anthropic-api-key"
-    }
+    "GOOGLE_APPLICATION_CREDENTIALS_JSON": "@google-credentials",
+    "BLOB_READ_WRITE_TOKEN": "@blob-token",
+    "ANTHROPIC_API_KEY": "@anthropic-key"
   }
 } 
