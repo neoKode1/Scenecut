@@ -17,19 +17,14 @@ const getVideoClient = () => {
 
     let parsedCredentials;
     try {
-      // First remove the outer quotes and any spaces after colons
-      const cleanedCredentials = credentials
-        .replace(/^"|"$/g, '')  // Remove outer quotes
-        .replace(/:\s+/g, ':')  // Remove spaces after colons
-        .replace(/\\n/g, '\n'); // Replace escaped newlines
-      
-      parsedCredentials = JSON.parse(cleanedCredentials);
-      console.log('Successfully parsed credentials for project:', parsedCredentials.project_id);
+      parsedCredentials = JSON.parse(credentials);
+      console.log('Initializing video client for project:', parsedCredentials.project_id);
     } catch (e) {
       console.error('Failed to parse credentials:', e);
-      throw new Error('Failed to parse Google credentials JSON');
+      throw new Error(`Failed to parse Google credentials JSON: ${e.message}`);
     }
 
+    // Create client with explicit credentials
     video_client = new VideoIntelligenceServiceClient({
       credentials: parsedCredentials,
       projectId: parsedCredentials.project_id
@@ -38,52 +33,49 @@ const getVideoClient = () => {
     return video_client;
   } catch (error) {
     console.error('Failed to initialize video client:', error);
-    throw new Error('Failed to initialize video analysis service');
+    throw error; // Preserve the original error
   }
 };
 
 export async function POST(request: Request) {
   try {
-    // Parse JSON request instead of form data
-    const { blob_url } = await request.json();
-    
-    if (!blob_url) {
-      console.error('Missing blob URL');
-      return NextResponse.json(
-        { error: 'Missing required data' },
-        { status: 400 }
-      );
-    }
+    // Get the request body
+    const body = await request.json();
+    console.log('Received analysis request for URL:', body.url);
 
     // Initialize video client
     const client = getVideoClient();
+    console.log('Video client initialized successfully');
 
-    // Fetch the video content from the blob URL
-    const response = await fetch(blob_url);
-    const buffer = await response.arrayBuffer();
-
-    // Process with Google Cloud
-    console.log('Starting Google Cloud analysis...');
+    // Start the video analysis
     const [operation] = await client.annotateVideo({
-      inputContent: Buffer.from(buffer).toString('base64'),
-      features: [protos.google.cloud.videointelligence.v1.Feature.SHOT_CHANGE_DETECTION],
+      inputUri: body.url,
+      features: ['SHOT_CHANGE_DETECTION'],
     });
 
-    const [analysisResponse] = await operation.promise();
-    
+    console.log('Analysis operation started:', operation.name);
+
+    // Wait for operation to complete
+    const [response] = await operation.promise();
+    console.log('Analysis completed successfully');
+
     return NextResponse.json({
-      shots: analysisResponse.annotationResults?.[0].shotAnnotations?.map(shot => ({
-        start_time: Number(shot.startTimeOffset?.seconds) || 0,
-        end_time: Number(shot.endTimeOffset?.seconds) || 0,
-      })) || [],
-      blob_url,
+      shots: response.annotationResults?.[0]?.shotAnnotations || [],
+      blob_url: body.url
     });
 
   } catch (error: any) {
-    console.error('Analysis error:', error);
-    return NextResponse.json(
-      { error: error.message || 'Analysis failed' },
-      { status: 500 }
-    );
+    console.error('Analysis failed:', error);
+    
+    // Return a detailed error response
+    return NextResponse.json({
+      error: 'Analysis failed',
+      details: {
+        message: error.message,
+        code: error.code,
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+        credentials: process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON ? 'Present' : 'Missing'
+      }
+    }, { status: 500 });
   }
 } 
