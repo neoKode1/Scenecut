@@ -46,29 +46,14 @@ export const VideoAnalysis: FC = () => {
     setUploadError(null);
 
     try {
-      let blobUrl: string;
-      
-      // For files larger than 4.5MB, use client-side upload
-      if (file.size > 4.5 * 1024 * 1024) {
-        const blob = await upload(file.name, file, {
-          access: 'public',
-          handleUploadUrl: '/api/upload-blob',
-          clientPayload: JSON.stringify({
-            fileSize: file.size,
-          })
-        });
-        blobUrl = blob.url;
-      } else {
-        // For smaller files, use the existing server-side upload
-        const formData = new FormData();
-        formData.append('file', file);
-        const response = await fetch('/api/upload-blob', {
-          method: 'POST',
-          body: formData,
-        });
-        if (!response.ok) throw new Error('Upload failed');
-        const data = await response.json();
-        blobUrl = data.url;
+      const blob = await upload(file.name, file, {
+        access: 'public',
+        handleUploadUrl: '/api/upload-blob',
+        clientPayload: JSON.stringify({ type: file.type })
+      });
+
+      if (!blob?.url) {
+        throw new Error('Upload failed - no URL returned');
       }
 
       // Send analysis request with proper headers
@@ -77,7 +62,7 @@ export const VideoAnalysis: FC = () => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ blob_url: blobUrl }),
+        body: JSON.stringify({ blob_url: blob.url }),
       });
 
       if (!analysisResponse.ok) {
@@ -93,7 +78,7 @@ export const VideoAnalysis: FC = () => {
       addMessage(`Analysis complete! Found ${totalShots} shots over ${duration.toFixed(1)} seconds.`, 'system');
     } catch (error) {
       console.error('Upload error:', error);
-      setUploadError(error instanceof Error ? error.message : 'Upload failed');
+      setUploadError('Upload failed. Please try again.');
     } finally {
       setIsUploading(false);
     }

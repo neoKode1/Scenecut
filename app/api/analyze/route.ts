@@ -17,11 +17,13 @@ const getVideoClient = () => {
 
     let parsedCredentials;
     try {
-      // Handle both string and already-parsed JSON
-      parsedCredentials = typeof credentials === 'string' 
-        ? JSON.parse(credentials.replace(/\\n/g, '\n')) 
-        : credentials;
-        
+      // First remove the outer quotes and any spaces after colons
+      const cleanedCredentials = credentials
+        .replace(/^"|"$/g, '')  // Remove outer quotes
+        .replace(/:\s+/g, ':')  // Remove spaces after colons
+        .replace(/\\n/g, '\n'); // Replace escaped newlines
+      
+      parsedCredentials = JSON.parse(cleanedCredentials);
       console.log('Successfully parsed credentials for project:', parsedCredentials.project_id);
     } catch (e) {
       console.error('Failed to parse credentials:', e);

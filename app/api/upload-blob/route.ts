@@ -1,77 +1,61 @@
-import { handleUpload } from '@vercel/blob/client';
-import { put } from '@vercel/blob';
 import { NextResponse } from 'next/server';
+import { put } from '@vercel/blob';
+import { handleUpload } from '@vercel/blob/client';
 
-interface ClientPayload {
-  fileSize: number;
-}
+// New way to configure the API route
+export const runtime = 'edge';
+export const dynamic = 'force-dynamic';
 
 export async function POST(request: Request) {
   try {
-    const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
+    const token = process.env.BLOB_READ_WRITE_TOKEN;
 
-    if (!blobToken) {
-      console.error('Missing BLOB_READ_WRITE_TOKEN environment variable');
+    if (!token || typeof token !== 'string') {
+      console.error('Invalid BLOB_READ_WRITE_TOKEN:', typeof token);
       return NextResponse.json(
         { error: 'Storage configuration error' },
         { status: 500 }
       );
     }
 
-    // Check if it's a client-side upload request
     const contentType = request.headers.get('content-type') || '';
+    
     if (contentType.includes('application/json')) {
-      // Handle client-side upload
-      const jsonResponse = await handleUpload({
+      const uploadResponse = await handleUpload({
         body: await request.json(),
         request,
-        token: blobToken,
-        onBeforeGenerateToken: async (pathname, clientPayload) => {
-          // Parse the stringified payload
-          const payload: ClientPayload = clientPayload ? JSON.parse(clientPayload) : { fileSize: 0 };
-          
-          return {
-            allowedContentTypes: ['video/mp4', 'video/quicktime', 'video/x-msvideo'],
-            maximumSizeInBytes: Math.max(payload.fileSize, 100 * 1024 * 1024), // Use file size or 100MB max
-          };
-        },
+        token,
+        onBeforeGenerateToken: async () => ({
+          allowedContentTypes: ['video/mp4', 'video/quicktime', 'video/x-msvideo'],
+          maximumSizeInBytes: 100 * 1024 * 1024,
+        }),
         onUploadCompleted: async ({ blob, tokenPayload }) => {
-          console.log('blob upload completed', blob);
+          console.log('Upload completed:', blob.url);
         },
       });
 
-      return NextResponse.json(jsonResponse);
-    } else {
-      // Handle server-side upload (for files < 4.5MB)
-      const formData = await request.formData();
-      const file = formData.get('file') as File;
-      
-      if (!file) {
-        return NextResponse.json(
-          { error: 'No file provided' },
-          { status: 400 }
-        );
-      }
-
-      if (file.size > 4.5 * 1024 * 1024) {
-        return NextResponse.json(
-          { error: 'File too large for server upload. Please use client-side upload.' },
-          { status: 400 }
-        );
-      }
-
-      const blob = await put(file.name, file, {
-        access: 'public',
-        token: blobToken,
-      });
-
-      return NextResponse.json(blob);
+      // Convert handleUpload response to a proper Response object
+      return NextResponse.json(uploadResponse);
     }
+
+    const formData = await request.formData();
+    const file = formData.get('file') as File;
+    
+    if (!file) {
+      return NextResponse.json({ error: 'No file provided' }, { status: 400 });
+    }
+
+    const blob = await put(file.name, file, {
+      access: 'public',
+      token,
+    });
+
+    return NextResponse.json(blob);
   } catch (error) {
-    console.error('Blob upload error:', error);
+    console.error('Upload error:', error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Upload failed' },
-      { status: 400 }
+      { status: 500 }
     );
   }
 } 
