@@ -1,17 +1,14 @@
 import { NextResponse } from 'next/server';
 
 export async function GET() {
-  try {
-    const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
-    
-    return NextResponse.json({
-      blob: {
-        exists: !!blobToken,
-        tokenPrefix: blobToken ? blobToken.substring(0, 10) : null,
-        length: blobToken ? blobToken.length : 0
-      }
-    });
-  } catch (error) {
-    return NextResponse.json({ error: 'Debug failed' }, { status: 500 });
-  }
+  return NextResponse.json({
+    hasAnthropicKey: !!process.env.ANTHROPIC_API_KEY,
+    keyPrefix: process.env.ANTHROPIC_API_KEY ? 
+      `${process.env.ANTHROPIC_API_KEY.substring(0, 5)}...` : 
+      null,
+    allEnvKeys: Object.keys(process.env),
+    nodeEnv: process.env.NODE_ENV,
+    // Add raw key value for debugging (we'll remove this after testing)
+    rawKey: process.env.ANTHROPIC_API_KEY
+  });
 } 

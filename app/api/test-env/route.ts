@@ -25,8 +25,8 @@ export async function GET() {
         details: googleDetails
       },
       blob: {
-        exists: !!process.env.BLOB_READ_WRITE_TOKEN,
-        prefix: process.env.BLOB_READ_WRITE_TOKEN?.substring(0, 10) + '...'
+        exists: !!process.env.SCENECUT_READ_WRITE_TOKEN,
+        prefix: process.env.SCENECUT_READ_WRITE_TOKEN?.substring(0, 10) + '...'
       },
       anthropic: {
         exists: !!process.env.ANTHROPIC_API_KEY,

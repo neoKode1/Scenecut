@@ -1,332 +1,129 @@
 'use client';
 
-import { FC, useCallback, useState } from 'react';
-import { useDropzone } from 'react-dropzone';
-import { upload } from '@vercel/blob/client';
-import { AnalysisStats } from './AnalysisStats';
+import React from 'react';
+import { ObjectTrack, PersonTrack, CameraMotion, DirectorInsight } from '@/types/video';
 
-interface Message {
-  text: string;
-  type: 'system' | 'error';
-  timestamp: number;
-}
-
-interface Shot {
-  start_time: number;
-  end_time: number;
-}
-
-interface AnalysisResult {
-  shots: Shot[];
-  url: string;
-  total_shots: number;
+interface VideoAnalysisProps {
+  shots: {
+    startTime: number;
+    endTime: number;
+    duration: number;
+    confidence: number;
+  }[];
+  objects: ObjectTrack[];
+  people: PersonTrack[];
+  cameraMotions: CameraMotion[];
+  directorInsights: DirectorInsight[];
   duration: number;
-  cameraDirections?: string;
 }
 
-export const VideoAnalysis: FC = () => {
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadError, setUploadError] = useState<string | null>(null);
-  const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [copied, setCopied] = useState(false);
-
-  const handleCopyDirections = useCallback(() => {
-    if (analysisResult?.cameraDirections) {
-      navigator.clipboard.writeText(analysisResult.cameraDirections);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-  }, [analysisResult]);
-
-  const addMessage = useCallback((text: string, type: 'system' | 'error') => {
-    setMessages(prev => [...prev, {
-      text,
-      type,
-      timestamp: Date.now()
-    }]);
-  }, []);
-
-  const checkVideoPlayability = async (file: File): Promise<boolean> => {
-    return new Promise((resolve) => {
-      const video = document.createElement('video');
-      const url = URL.createObjectURL(file);
-      
-      video.onloadeddata = () => {
-        URL.revokeObjectURL(url);
-        resolve(true);
-      };
-      
-      video.onerror = () => {
-        URL.revokeObjectURL(url);
-        resolve(false);
-      };
-      
-      video.src = url;
-    });
-  };
-
-  const onDrop = useCallback(async (acceptedFiles: File[]) => {
-    const file = acceptedFiles[0];
-    if (!file) return;
-
-    setIsUploading(true);
-    setUploadError(null);
-    addMessage('Starting upload...', 'system');
-
-    try {
-      // Upload to blob storage
-      const blob = await upload(file.name, file, {
-        access: 'public',
-        handleUploadUrl: '/api/upload-blob'
-      });
-
-      if (!blob?.url) {
-        throw new Error('Upload failed - no URL returned');
-      }
-
-      addMessage('Upload complete, starting analysis...', 'system');
-
-      // Call analyze endpoint with explicit no-cache
-      const response = await fetch('/api/analyze', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache',
-          'Pragma': 'no-cache'
-        },
-        body: JSON.stringify({ 
-          url: blob.url,
-          metadata: {
-            type: file.type,
-            size: file.size,
-            name: file.name
-          }
-        }),
-      });
-
-      // Log the response headers for debugging
-      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
-
-      // Check content type before parsing
-      const contentType = response.headers.get('content-type');
-      if (!contentType?.includes('application/json')) {
-        console.warn('Unexpected content type:', contentType);
-        // Try to parse as JSON anyway
-      }
-
-      let data;
-      const text = await response.text();
-      try {
-        data = JSON.parse(text);
-      } catch (e) {
-        console.error('Failed to parse response:', text);
-        throw new Error('Invalid response format from server');
-      }
-
-      if (!response.ok) {
-        throw new Error(data.details || 'Analysis failed');
-      }
-
-      console.log('Analysis result:', data);
-      setAnalysisResult(data);
-      addMessage('Analysis complete, generating shot breakdown...', 'system');
-
-      // Call Anthropic API with the analysis results
-      const promptResponse = await fetch('/api/generate-prompt', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          shots: data.shots,
-          blob_url: blob.url
-        }),
-      });
-
-      const promptData = await promptResponse.json();
-      if (!promptResponse.ok) {
-        throw new Error(promptData.error || 'Failed to generate shot breakdown');
-      }
-
-      // Add the analysis to the UI
-      setAnalysisResult({
-        ...data,
-        cameraDirections: promptData.analysis
-      });
-      addMessage('Shot breakdown complete!', 'system');
-
-    } catch (error) {
-      console.error('Upload/Analysis error:', error);
-      setUploadError(
-        error instanceof Error 
-          ? error.message 
-          : 'Upload or analysis failed'
-      );
-      addMessage(
-        error instanceof Error 
-          ? error.message 
-          : 'Upload or analysis failed',
-        'error'
-      );
-    } finally {
-      setIsUploading(false);
-    }
-  }, [addMessage]);
-
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
-    accept: {
-      'video/mp4': ['.mp4'],
-      'video/quicktime': ['.mov'],
-    },
-    maxFiles: 1,
-    disabled: isUploading,
-    maxSize: 15 * 1024 * 1024 // 15MB limit
-  });
-
+export default function VideoAnalysis({ 
+  shots, 
+  objects, 
+  people,
+  cameraMotions, 
+  directorInsights, 
+  duration 
+}: VideoAnalysisProps) {
   return (
-    <div className="analysis-container">
-      <div 
-        {...getRootProps()} 
-        className={`dropzone ${isDragActive ? 'active' : ''} ${isUploading ? 'uploading' : ''}`}
-      >
-        <input {...getInputProps()} />
-        {isUploading ? (
-          <p>Uploading and analyzing video...</p>
-        ) : (
-          <p>
-            Drag & drop a video file here, or click to select one<br/>
-            <small>Supported format: MP4 (H.264)</small>
-          </p>
-        )}
-      </div>
-      {uploadError && (
-        <div className="error-message">
-          {uploadError}
-        </div>
-      )}
-      <div className="messages">
-        {messages.map((message, index) => (
-          <div key={message.timestamp} className={`message ${message.type}`}>
-            {message.text}
+    <div className="analysis-container mt-8">
+      <h3 className="text-xl font-bold mb-4 text-cyan-400">Scene Analysis</h3>
+      
+      {/* Camera Movements */}
+      <div className="mb-6">
+        <h4 className="text-lg font-semibold mb-2 text-cyan-300">Camera Movements</h4>
+        {cameraMotions?.map((motion, i) => (
+          <div key={i} className="bg-gray-800 rounded p-3 mb-2">
+            <p className="font-medium">Shot {i + 1}: {motion.shotStart}s - {motion.shotEnd}s</p>
+            <p className="text-sm text-gray-400">
+              Primary Motion: {motion.primaryMotion}
+              {motion.intensity > 0.5 && ' (Fast)'}
+            </p>
+            <p className="text-sm text-gray-400">
+              Dominant Objects: {motion.dominantObjects.map(obj => obj.type).join(', ')}
+            </p>
+            {directorInsights[i] && (
+              <p className="text-sm text-cyan-300 mt-2">
+                {directorInsights[i].intent} - {directorInsights[i].technical}
+              </p>
+            )}
           </div>
         ))}
       </div>
-      {analysisResult && (
-        <div className="analysis-results">
-          <div className="stats">
-            <div className="stat">
-              <h3>Total Shots</h3>
-              <div className="value">{analysisResult.total_shots}</div>
-            </div>
-            <div className="stat">
-              <h3>Scene Duration</h3>
-              <div className="value">{analysisResult.duration.toFixed(1)}s</div>
-            </div>
-          </div>
 
-          <div className="shot-timeline-section">
-            <h3 className="text-cyan-400 text-lg font-bold mb-2">Shot Timeline</h3>
-            <div className="shot-timeline">
-              {analysisResult.shots.map((shot, index) => (
-                <div
-                  key={index}
-                  className="shot-segment"
-                  style={{
-                    width: `${((shot.end_time - shot.start_time) / analysisResult.duration) * 100}%`
-                  }}
-                  title={`Shot ${index + 1}: ${shot.start_time.toFixed(1)}s - ${shot.end_time.toFixed(1)}s`}
-                />
+      {/* Objects */}
+      <div className="mb-6">
+        <h4 className="text-lg font-semibold mb-2 text-cyan-300">Objects & Elements</h4>
+        {objects && objects.length > 0 ? (
+          objects.map((obj, i) => (
+            <div key={i} className="bg-gray-800 rounded p-3 mb-2">
+              <p className="font-medium">{obj.description}</p>
+              <p className="text-sm text-gray-400">
+                Confidence: {(obj.confidence * 100).toFixed(1)}%
+                <br />
+                Duration: {obj.timeSegment.start}s - {obj.timeSegment.end}s
+              </p>
+            </div>
+          ))
+        ) : (
+          <p className="text-gray-400">No objects detected</p>
+        )}
+      </div>
+
+      {/* People */}
+      {people && people.length > 0 && (
+        <div className="mb-6">
+          <h4 className="text-lg font-semibold mb-2 text-cyan-300">People</h4>
+          {people.map((person, i) => (
+            <div key={i} className="bg-gray-800 rounded p-3 mb-2">
+              <p>Person {i + 1}</p>
+              <p className="text-sm text-gray-400">Confidence: {(person.confidence * 100).toFixed(1)}%</p>
+              {person.tracks?.map((track, j) => (
+                <div key={j} className="text-sm text-gray-400 mt-1">
+                  <p>Track {j + 1}</p>
+                  <p>Confidence: {(track.confidence * 100).toFixed(1)}%</p>
+                  {track.timestamps?.map((timestamp, k) => (
+                    <div key={k} className="ml-2">
+                      <p>Time: {timestamp.time}s</p>
+                      {timestamp.attributes?.map((attr, l) => (
+                        <p key={l}>{attr.name}: {(attr.confidence * 100).toFixed(1)}%</p>
+                      ))}
+                    </div>
+                  ))}
+                </div>
               ))}
             </div>
-          </div>
-
-          <div className="shots-breakdown mt-6">
-            <h3 className="text-cyan-400 text-lg font-bold mb-2">Shot Breakdown</h3>
-            {analysisResult.shots.map((shot, index) => (
-              <div key={index} className="shot-item">
-                <span className="shot-number">Shot {index + 1}:</span>
-                <span className="shot-time">
-                  {shot.start_time.toFixed(1)}s - {shot.end_time.toFixed(1)}s
-                </span>
-                <span className="shot-duration">
-                  ({(shot.end_time - shot.start_time).toFixed(1)}s)
-                </span>
-              </div>
-            ))}
-          </div>
-
-          {analysisResult.cameraDirections && (
-            <div className="camera-directions mt-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-cyan-400 text-lg font-bold">Camera Directions</h3>
-                <button
-                  onClick={handleCopyDirections}
-                  className="copy-button"
-                  title="Copy camera directions"
-                >
-                  {copied ? '✓ Copied!' : 'Copy Instructions'}
-                </button>
-              </div>
-              <div className="directions-content bg-gray-900/50 p-4 rounded-lg">
-                {analysisResult.cameraDirections.split('\n').map((line, index) => (
-                  <p key={index} className="mb-2">{line}</p>
-                ))}
-              </div>
-            </div>
-          )}
+          ))}
         </div>
       )}
+
+      {/* Director's Analysis */}
+      <div className="mb-6">
+        <h4 className="text-lg font-semibold mb-2 text-cyan-300">Director's Analysis</h4>
+        {directorInsights?.map((insight, i) => (
+          <div 
+            key={i}
+            className="bg-gray-800 rounded p-4 mb-3"
+          >
+            <h5 className="font-medium text-cyan-400 mb-2">Shot {i + 1}</h5>
+            <div className="space-y-2 text-sm">
+              <p><span className="text-cyan-300">Intent:</span> {insight.intent}</p>
+              <p><span className="text-cyan-300">Technical:</span> {insight.technical}</p>
+              <p><span className="text-cyan-300">Context:</span> {insight.context}</p>
+              {insight.suggestions.length > 0 && (
+                <div>
+                  <span className="text-cyan-300">Suggestions:</span>
+                  <ul className="list-disc list-inside pl-4 text-gray-300">
+                    {insight.suggestions.map((suggestion: string, j: number) => (
+                      <li key={j}>{suggestion}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
-};
-
-// Add some styles to make the dropzone visible
-const styles = `
-.dropzone {
-  border: 2px dashed #cccccc;
-  border-radius: 4px;
-  padding: 20px;
-  text-align: center;
-  cursor: pointer;
-  margin-bottom: 20px;
-  transition: all 0.3s ease;
-}
-
-.dropzone.active {
-  border-color: #2196f3;
-  background-color: rgba(33, 150, 243, 0.1);
-}
-
-.dropzone.uploading {
-  border-color: #4caf50;
-  background-color: rgba(76, 175, 80, 0.1);
-  cursor: not-allowed;
-}
-
-.error-message {
-  color: #f44336;
-  margin-top: 10px;
-}
-
-.messages {
-  margin-top: 1rem;
-}
-
-.message {
-  padding: 0.5rem;
-  margin-bottom: 0.5rem;
-  border-radius: 4px;
-}
-
-.message.system {
-  background-color: rgba(33, 150, 243, 0.1);
-  color: #2196f3;
-}
-
-.message.error {
-  background-color: rgba(244, 67, 54, 0.1);
-  color: #f44336;
-}
-`; 
+} 

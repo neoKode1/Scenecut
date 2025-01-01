@@ -9,4 +9,21 @@ export interface AnalysisResult {
     end_time: number;
   }[];
   blob_url: string;
+}
+
+export interface VideoAnalysis {
+  shotChanges: {
+    startTime: number;
+    endTime: number;
+    description?: string;
+  }[];
+  cameraMovements: string[];
+  timeline: string[];
+  recreationSteps: string[];
+}
+
+export interface UploadResponse {
+  blobUrl: string;
+  success: boolean;
+  error?: string;
 } 

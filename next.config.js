@@ -1,23 +1,32 @@
+require('dotenv').config();
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   async headers() {
     return [
       {
-        source: '/api/:path*',
+        source: "/:path*",
         headers: [
-          { key: 'Access-Control-Allow-Origin', value: '*' },
-          { key: 'Access-Control-Allow-Methods', value: 'GET,POST,PUT,DELETE,OPTIONS' },
-          { key: 'Access-Control-Allow-Headers', value: 'Content-Type' },
-          { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
-          { key: 'Cross-Origin-Embedder-Policy', value: 'require-corp' }
+          {
+            key: "Cross-Origin-Embedder-Policy",
+            value: "require-corp",
+          },
+          {
+            key: "Cross-Origin-Opener-Policy",
+            value: "same-origin",
+          },
         ],
       },
     ];
   },
   env: {
-    GOOGLE_APPLICATION_CREDENTIALS_JSON: process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON,
-    BLOB_READ_WRITE_TOKEN: process.env.BLOB_READ_WRITE_TOKEN,
     ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
+    GOOGLE_API_KEY: process.env.GOOGLE_API_KEY,
+    GOOGLE_CLIENT_EMAIL: process.env.GOOGLE_CLIENT_EMAIL,
+    GOOGLE_PROJECT_ID: process.env.GOOGLE_PROJECT_ID,
+    GOOGLE_PRIVATE_KEY: process.env.GOOGLE_PRIVATE_KEY,
+    GOOGLE_STORAGE_BUCKET: process.env.GOOGLE_STORAGE_BUCKET,
+    GOOGLE_ACCESS_TOKEN: process.env.GOOGLE_ACCESS_TOKEN,
   }
 }
 

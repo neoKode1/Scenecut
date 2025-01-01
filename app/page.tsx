@@ -1,9 +1,46 @@
 'use client';
 
-import { FC } from 'react';
-import { VideoAnalysis } from './components/VideoAnalysis';
+import { FC, useState } from 'react';
+import VideoAnalysis from './components/VideoAnalysis';
+import VideoUpload from './components/VideoUpload';
+import { ObjectTrack, PersonTrack, CameraMotion, DirectorInsight } from '@/types/video';
+
+interface AnalysisData {
+  shots: Array<{
+    startTime: number;
+    endTime: number;
+    duration: number;
+    confidence: number;
+  }>;
+  objects: ObjectTrack[];
+  people: PersonTrack[];
+  cameraMotions: CameraMotion[];
+  directorInsights: DirectorInsight[];
+}
 
 const Home: FC = () => {
+  const [analysisData, setAnalysisData] = useState<AnalysisData | null>(null);
+  const [duration, setDuration] = useState(0);
+  const [status, setStatus] = useState<string>('');
+  const [error, setError] = useState<string>('');
+
+  const handleVideoProcessed = (data: any, videoDuration: number) => {
+    console.log('Received analysis data:', data);
+    if (data.analysis) {
+      setAnalysisData({
+        shots: data.analysis.shots,
+        objects: data.analysis.objects,
+        people: data.analysis.people,
+        cameraMotions: data.analysis.cameraMotions,
+        directorInsights: data.analysis.directorInsights
+      });
+      setDuration(videoDuration);
+      setError('');
+    } else {
+      setError('Invalid analysis data received');
+    }
+  };
+
   return (
     <div className="app-container">
       <div className="instructions-panel">
@@ -29,7 +66,25 @@ const Home: FC = () => {
       </div>
       
       <div className="main-content">
-        <VideoAnalysis />
+        <VideoUpload 
+          onVideoProcessed={handleVideoProcessed}
+          onError={setError}
+          onStatusUpdate={setStatus}
+        />
+        
+        {status && <p className="message system">{status}</p>}
+        {error && <p className="message error">{error}</p>}
+        
+        {analysisData && (
+          <VideoAnalysis 
+            shots={analysisData.shots}
+            objects={analysisData.objects}
+            people={analysisData.people}
+            cameraMotions={analysisData.cameraMotions}
+            directorInsights={analysisData.directorInsights}
+            duration={duration}
+          />
+        )}
       </div>
     </div>
   );

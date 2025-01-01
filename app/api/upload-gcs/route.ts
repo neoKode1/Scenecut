@@ -7,12 +7,8 @@ export async function POST(request: Request) {
   try {
     console.log('Starting upload process...');
 
-    // Check credentials and bucket name
-    if (!process.env.GOOGLE_CLIENT_EMAIL || 
-        !process.env.GOOGLE_PRIVATE_KEY || 
-        !process.env.GOOGLE_PROJECT_ID ||
-        !process.env.GOOGLE_STORAGE_BUCKET) {
-      throw new Error('Missing Google Cloud configuration');
+    if (!process.env.GOOGLE_CLIENT_EMAIL || !process.env.GOOGLE_PRIVATE_KEY || !process.env.GOOGLE_PROJECT_ID) {
+      throw new Error('Missing Google Cloud credentials');
     }
 
     const formData = await request.formData();
@@ -22,46 +18,42 @@ export async function POST(request: Request) {
       throw new Error('No file provided');
     }
 
-    console.log('File received:', {
-      name: file.name,
-      size: file.size,
-      type: file.type
-    });
-
     const storage = new Storage({
+      projectId: process.env.GOOGLE_PROJECT_ID,
       credentials: {
         client_email: process.env.GOOGLE_CLIENT_EMAIL,
-        private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+        private_key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
         project_id: process.env.GOOGLE_PROJECT_ID
       }
     });
 
-    const bucket = storage.bucket(process.env.GOOGLE_STORAGE_BUCKET);
+    const bucket = storage.bucket('scenecut');
     const timestamp = Date.now();
     const uniqueFilename = `${timestamp}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
-    const blob = bucket.file(uniqueFilename);
+    const gcsFile = bucket.file(uniqueFilename);
 
-    console.log('Converting file to buffer...');
+    // Convert file to buffer
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    console.log('Starting file upload to GCS...');
-    await blob.save(buffer, {
+    // Upload without ACL settings
+    await gcsFile.save(buffer, {
       metadata: {
         contentType: file.type
       }
     });
 
-    const [url] = await blob.getSignedUrl({
+    // Generate signed URL for 1 hour access
+    const [signedUrl] = await gcsFile.getSignedUrl({
       action: 'read',
       expires: Date.now() + 1000 * 60 * 60, // 1 hour
     });
 
-    console.log('Upload successful:', url);
+    console.log('Upload successful:', signedUrl);
 
     return NextResponse.json({
       success: true,
-      url,
+      url: signedUrl,
       size: file.size,
       filename: uniqueFilename
     });

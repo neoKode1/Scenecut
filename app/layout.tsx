@@ -1,16 +1,9 @@
 import './globals.css'
-import { Inter, Orbitron } from 'next/font/google'
+import type { Metadata } from 'next'
 
-const inter = Inter({ subsets: ['latin'] })
-const orbitron = Orbitron({ 
-  subsets: ['latin'],
-  weight: ['700'],
-  variable: '--font-orbitron'
-})
-
-export const metadata = {
-  title: 'Scene Cut - Video Analysis',
-  description: 'AI-powered video analysis tool',
+export const metadata: Metadata = {
+  title: 'Scenecut - Video Analysis',
+  description: 'AI-powered video analysis for filmmakers',
 }
 
 export default function RootLayout({
@@ -20,7 +13,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={`${inter.className} ${orbitron.variable}`}>{children}</body>
+      <body>{children}</body>
     </html>
   )
 } 
