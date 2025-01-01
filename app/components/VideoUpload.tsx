@@ -7,6 +7,33 @@ interface VideoUploadProps {
   onStatusUpdate: (status: string) => void;
 }
 
+const SUPPORTED_FORMATS = {
+  'video/mp4': ['.mp4'],
+  'video/quicktime': ['.mov'],
+  'video/x-msvideo': ['.avi']
+};
+
+const validateVideoFormat = (file: File): Promise<boolean> => {
+  return new Promise((resolve) => {
+    const video = document.createElement('video');
+    video.preload = 'metadata';
+
+    video.onloadedmetadata = () => {
+      URL.revokeObjectURL(video.src);
+      // Check if video codec is supported (H.264 is widely supported)
+      const isSupported = video.videoWidth > 0 && video.videoHeight > 0;
+      resolve(isSupported);
+    };
+
+    video.onerror = () => {
+      URL.revokeObjectURL(video.src);
+      resolve(false);
+    };
+
+    video.src = URL.createObjectURL(file);
+  });
+};
+
 export default function VideoUpload({ onVideoProcessed, onError, onStatusUpdate }: VideoUploadProps) {
   const [credentialsVerified, setCredentialsVerified] = useState(false);
   const [isVerifying, setIsVerifying] = useState(true);
@@ -62,6 +89,12 @@ export default function VideoUpload({ onVideoProcessed, onError, onStatusUpdate 
     }
 
     try {
+      // Validate video format
+      const isValidFormat = await validateVideoFormat(file);
+      if (!isValidFormat) {
+        throw new Error('Unsupported video format. Please use an MP4 file with H.264 codec.');
+      }
+
       const formData = new FormData();
       formData.append('file', file);
 
@@ -80,6 +113,10 @@ export default function VideoUpload({ onVideoProcessed, onError, onStatusUpdate 
           reject(new Error('Failed to load video metadata'));
         };
       });
+
+      if (duration > 60) {
+        throw new Error('Video must be under 1 minute long for best results');
+      }
 
       console.log('Video duration:', duration);
 
@@ -112,9 +149,7 @@ export default function VideoUpload({ onVideoProcessed, onError, onStatusUpdate 
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
-    accept: {
-      'video/*': ['.mp4', '.mov', '.avi']
-    },
+    accept: SUPPORTED_FORMATS,
     maxSize: 100 * 1024 * 1024, // 100MB
     maxFiles: 1,
     disabled: !credentialsVerified || isVerifying
@@ -144,7 +179,8 @@ export default function VideoUpload({ onVideoProcessed, onError, onStatusUpdate 
       ) : (
         <>
           <p className="text-lg mb-2">Drop your video here or click to select</p>
-          <p className="text-sm text-gray-400">MP4, MOV, or AVI (max 100MB)</p>
+          <p className="text-sm text-gray-400">MP4 with H.264 codec recommended (max 100MB)</p>
+          <p className="text-sm text-gray-400">For best results, use clips under 1 minute</p>
         </>
       )}
     </div>
